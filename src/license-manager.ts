@@ -96,78 +96,75 @@ export class LicenseManager {
   }
 
   /**
-   * Validate license key format
-   * Gumroad keys are 35-character alphanumeric strings with hyphens
+   * Validate email format
    */
-  private validateKeyFormat(key: string): boolean {
-    // Gumroad license key format: XXXXXXXX-XXXXXXXX-XXXXXXXX-XXXXXXXX
-    const pattern = /^[A-F0-9]{8}-[A-F0-9]{8}-[A-F0-9]{8}-[A-F0-9]{8}$/i;
-    return pattern.test(key.trim());
+  private validateEmail(email: string): boolean {
+    const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return pattern.test(email.trim());
   }
 
   /**
-   * Verify license key with Gumroad API
+   * Verify subscription by email with Gumroad API
    */
-  private async verifySubscription(key: string): Promise<{
+  private async verifySubscription(email: string): Promise<{
     valid: boolean;
     expiresAt: string;
     status: "active" | "expired" | "cancelled";
     email?: string;
   } | null> {
-    const normalizedKey = key.trim();
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!this.validateEmail(normalizedEmail)) {
+      return null;
+    }
 
     try {
-      const response = await fetch("https://api.gumroad.com/v2/licenses/verify", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-          product_id: this.productId,
-          license_key: normalizedKey,
-          increment_uses_count: "false",
-        }),
-      });
+      // Gumroad API requires access token for sales lookup
+      // Using the sales API to check subscription status by email
+      const response = await fetch(
+        `https://api.gumroad.com/v2/sales?email=${encodeURIComponent(normalizedEmail)}`,
+        {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${process.env.GUMROAD_ACCESS_TOKEN || ""}`,
+          },
+        }
+      );
 
       const data = await response.json();
 
-      if (!data.success) {
+      if (!data.success || !data.sales || data.sales.length === 0) {
         return null;
       }
 
-      // Gumroad subscription: check if subscription is active
-      const purchase = data.purchase;
+      // Find the subscription for this product
+      const sale = data.sales.find(
+        (s: any) => s.product_id === this.productId || s.product_permalink === this.productId
+      );
 
-      // For subscriptions, check cancelled/ended status
-      if (purchase.subscription_cancelled_at || purchase.subscription_ended_at) {
+      if (!sale) {
+        return null;
+      }
+
+      // Check subscription status
+      if (sale.subscription_cancelled_at || sale.subscription_ended_at || sale.refunded) {
         return {
           valid: false,
-          expiresAt: purchase.subscription_ended_at || new Date().toISOString(),
-          status: "cancelled",
-          email: purchase.email,
+          expiresAt: sale.subscription_ended_at || new Date().toISOString(),
+          status: sale.refunded ? "cancelled" : "cancelled",
+          email: normalizedEmail,
         };
       }
 
-      // Calculate expiry based on subscription
-      // Gumroad subscriptions renew monthly, so set expiry to next billing date
-      let expiresAt: string;
-      if (purchase.subscription_id) {
-        // Active subscription - set expiry to 35 days from now (buffer for monthly renewal)
-        const expiry = new Date();
-        expiry.setDate(expiry.getDate() + 35);
-        expiresAt = expiry.toISOString();
-      } else {
-        // One-time purchase - lifetime access
-        const expiry = new Date();
-        expiry.setFullYear(expiry.getFullYear() + 100);
-        expiresAt = expiry.toISOString();
-      }
+      // Active subscription - set expiry to 35 days from now
+      const expiry = new Date();
+      expiry.setDate(expiry.getDate() + 35);
 
       return {
         valid: true,
-        expiresAt,
+        expiresAt: expiry.toISOString(),
         status: "active",
-        email: purchase.email,
+        email: normalizedEmail,
       };
     } catch (error) {
       console.error("Gumroad API error:", error);
@@ -196,10 +193,10 @@ export class LicenseManager {
   }
 
   /**
-   * Activate subscription with license key
+   * Activate subscription with email
    */
-  async activateSubscription(key: string, email?: string): Promise<LicenseValidation> {
-    const verification = await this.verifySubscription(key);
+  async activateSubscription(email: string): Promise<LicenseValidation> {
+    const verification = await this.verifySubscription(email);
 
     if (!verification || !verification.valid) {
       return {
@@ -207,13 +204,13 @@ export class LicenseManager {
         plan: "free",
         status: "none",
         features: Object.keys(PLAN_FEATURES.free),
-        message: `❌ Invalid license key\n\nPlease check your key and try again.\n\n📦 Subscribe at: ${this.purchaseUrl}\n💰 Only $${PRICING.monthly.price}/month`,
+        message: `❌ No active subscription found for this email\n\nPlease check your email and try again.\n\n📦 Subscribe at: ${this.purchaseUrl}\n💰 Only $${PRICING.monthly.price}/month`,
       };
     }
 
     const subscription: SubscriptionInfo = {
-      key: key.toUpperCase().trim(),
-      email,
+      key: email.trim().toLowerCase(),
+      email: email.trim().toLowerCase(),
       activatedAt: new Date().toISOString(),
       expiresAt: verification.expiresAt,
       plan: "pro",

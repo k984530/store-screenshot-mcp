@@ -109,20 +109,16 @@ PRO PLAN ($4.9/mo): Unlimited, no watermark, all presets & devices, batch genera
   },
   {
     name: "activate_subscription",
-    description: "Activate a Pro subscription with your license key",
+    description: "Activate a Pro subscription with your purchase email",
     inputSchema: {
       type: "object",
       properties: {
-        licenseKey: {
-          type: "string",
-          description: "Your Gumroad license key (format: XXXXXXXX-XXXXXXXX-XXXXXXXX-XXXXXXXX)",
-        },
         email: {
           type: "string",
-          description: "Email associated with your purchase (optional)",
+          description: "Email used for Gumroad purchase",
         },
       },
-      required: ["licenseKey"],
+      required: ["email"],
     },
   },
   {
@@ -313,12 +309,11 @@ async function main() {
         }
 
         case "activate_subscription": {
-          const { licenseKey, email } = args as {
-            licenseKey: string;
-            email?: string;
+          const { email } = args as {
+            email: string;
           };
 
-          const result = await licenseManager.activateSubscription(licenseKey, email);
+          const result = await licenseManager.activateSubscription(email);
 
           return {
             content: [
