@@ -364,6 +364,17 @@ export class LicenseManager {
       };
     }
 
+    // Check if cancelled
+    if (this.currentSubscription.status === "cancelled") {
+      return {
+        valid: false,
+        plan: "free",
+        status: "cancelled",
+        features: Object.keys(PLAN_FEATURES.free),
+        message: `⚠️ Subscription Cancelled\n\nYour subscription is no longer active.\n\n🔄 Resubscribe: ${this.purchaseUrl}\n💰 Only $${PRICING.monthly.price}/month\n\nYou're now on the Free plan with limitations.`,
+      };
+    }
+
     // Check if expired
     if (this.isExpired()) {
       return {
@@ -440,7 +451,7 @@ Limitations:
    * Get plan features
    */
   getPlanFeatures(): typeof PLAN_FEATURES.free | typeof PLAN_FEATURES.pro {
-    if (!this.currentSubscription || this.isExpired()) {
+    if (!this.currentSubscription || this.isExpired() || this.currentSubscription.status === "cancelled") {
       return PLAN_FEATURES.free;
     }
     return PLAN_FEATURES.pro;

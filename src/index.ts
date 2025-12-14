@@ -131,6 +131,15 @@ PRO PLAN ($4.9/mo): Unlimited, no watermark, all presets & devices, batch genera
     },
   },
   {
+    name: "refresh_subscription",
+    description: "Refresh subscription status from server (checks if still active)",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      required: [],
+    },
+  },
+  {
     name: "list_presets",
     description: "List available color presets for your plan",
     inputSchema: {
@@ -333,6 +342,19 @@ async function main() {
               {
                 type: "text",
                 text: `✅ Subscription deactivated\n\nYou're now on the Free plan.\n\n🚀 Resubscribe anytime: ${licenseManager.purchaseUrl}`,
+              },
+            ],
+          };
+        }
+
+        case "refresh_subscription": {
+          const result = await licenseManager.refreshSubscription();
+
+          return {
+            content: [
+              {
+                type: "text",
+                text: `🔄 Subscription Refreshed\n\n${result.message}`,
               },
             ],
           };
