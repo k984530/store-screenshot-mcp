@@ -28,7 +28,7 @@ Generate beautiful App Store / Play Store screenshots with iPhone mockups using 
 | Daily screenshots | 3 | Unlimited |
 | Watermark | Yes | No |
 | Presets | purple, dark | All 7 |
-| Devices | iPhone 15 Pro Max | All 4 |
+| Devices | iPhone 15 Pro Max | All 7 (3 iPhones + 4 iPads) |
 | Batch generation | No | Yes |
 | Custom colors | No | Yes |
 
@@ -39,9 +39,37 @@ npm install
 npm run build
 ```
 
-### Register MCP Server
+### Usage with Claude Code
 
-Add to `~/.claude/mcp_settings.json`:
+Add to your project's `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "store-screenshot": {
+      "command": "node",
+      "args": ["/path/to/store-screenshot-mcp/dist/index.js"]
+    }
+  }
+}
+```
+
+Or for global setup, add to `~/.claude/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "store-screenshot": {
+      "command": "node",
+      "args": ["/path/to/store-screenshot-mcp/dist/index.js"]
+    }
+  }
+}
+```
+
+### Usage with Claude Desktop
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
 
 ```json
 {
@@ -118,6 +146,9 @@ List available presets/devices for your plan.
 | iPhone 15 Pro | 1179 x 2556 | Pro |
 | iPhone SE | 750 x 1334 | Pro |
 | iPad Pro 12.9" | 2048 x 2732 | Pro |
+| iPad Pro 11" | 1668 x 2388 | Pro |
+| iPad Air | 1640 x 2360 | Pro |
+| iPad Mini | 1488 x 2266 | Pro |
 
 ## Usage Example
 

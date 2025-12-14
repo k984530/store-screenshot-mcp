@@ -34,7 +34,15 @@ const PLAN_FEATURES = {
   },
   pro: {
     maxScreenshotsPerDay: Infinity,
-    devices: ["iphone-15-pro-max", "iphone-15-pro", "iphone-se", "ipad-pro"],
+    devices: [
+      "iphone-15-pro-max",
+      "iphone-15-pro",
+      "iphone-se",
+      "ipad-pro-129",
+      "ipad-pro-11",
+      "ipad-air",
+      "ipad-mini",
+    ],
     presets: ["purple", "pink", "blue", "green", "orange", "dark", "light"],
     batchGeneration: true,
     customColors: true,

@@ -47,7 +47,7 @@ PRO PLAN ($4.9/mo): Unlimited, no watermark, all presets & devices, batch genera
         },
         device: {
           type: "string",
-          enum: ["iphone-15-pro-max", "iphone-15-pro", "iphone-se", "ipad-pro"],
+          enum: ["iphone-15-pro-max", "iphone-15-pro", "iphone-se", "ipad-pro-129", "ipad-pro-11", "ipad-air", "ipad-mini"],
           description: "Device type (Free: iPhone 15 Pro Max only)",
         },
         preset: {
@@ -175,7 +175,10 @@ const ALL_DEVICES: Record<string, { width: number; height: number; description: 
   "iphone-15-pro-max": { width: 1290, height: 2796, description: "iPhone 15 Pro Max (6.7\")" },
   "iphone-15-pro": { width: 1179, height: 2556, description: "iPhone 15 Pro (6.1\")" },
   "iphone-se": { width: 750, height: 1334, description: "iPhone SE (4.7\")" },
-  "ipad-pro": { width: 2048, height: 2732, description: "iPad Pro 12.9\"" },
+  "ipad-pro-129": { width: 2048, height: 2732, description: "iPad Pro 12.9\"" },
+  "ipad-pro-11": { width: 1668, height: 2388, description: "iPad Pro 11\"" },
+  "ipad-air": { width: 1640, height: 2360, description: "iPad Air" },
+  "ipad-mini": { width: 1488, height: 2266, description: "iPad Mini" },
 };
 
 async function main() {

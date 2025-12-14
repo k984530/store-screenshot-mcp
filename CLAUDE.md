@@ -39,7 +39,10 @@ npm start         # Run compiled JavaScript
 - iPhone 15 Pro Max: 1290x2796
 - iPhone 15 Pro: 1179x2556
 - iPhone SE: 750x1334
-- iPad Pro: 2048x2732
+- iPad Pro 12.9": 2048x2732
+- iPad Pro 11": 1668x2388
+- iPad Air: 1640x2360
+- iPad Mini: 1488x2266
 
 **Color presets**: purple, pink, blue, green, orange, dark, light (Free plan: purple, dark only)
 

@@ -57,10 +57,15 @@ const COLOR_PRESETS: Record<string, { color1: string; color2: string }> = {
 
 export class ScreenshotGenerator {
   private deviceConfigs: Record<string, DeviceConfig> = {
+    // iPhones
     "iphone-15-pro-max": { width: 1290, height: 2796, name: "iPhone 15 Pro Max" },
     "iphone-15-pro": { width: 1179, height: 2556, name: "iPhone 15 Pro" },
     "iphone-se": { width: 750, height: 1334, name: "iPhone SE" },
-    "ipad-pro": { width: 2048, height: 2732, name: "iPad Pro 12.9" },
+    // iPads
+    "ipad-pro-129": { width: 2048, height: 2732, name: "iPad Pro 12.9\"" },
+    "ipad-pro-11": { width: 1668, height: 2388, name: "iPad Pro 11\"" },
+    "ipad-air": { width: 1640, height: 2360, name: "iPad Air" },
+    "ipad-mini": { width: 1488, height: 2266, name: "iPad Mini" },
   };
 
   private licenseManager: LicenseManager;
@@ -71,6 +76,10 @@ export class ScreenshotGenerator {
 
   getLicenseManager(): LicenseManager {
     return this.licenseManager;
+  }
+
+  private isIPad(device: string): boolean {
+    return device.startsWith("ipad-");
   }
 
   async generate(options: GenerateOptions): Promise<GenerateResult> {
@@ -127,6 +136,7 @@ export class ScreenshotGenerator {
     const shouldWatermark = this.licenseManager.shouldAddWatermark();
 
     // Create SVG with background and mockup
+    const isTablet = this.isIPad(device);
     const svg = this.createSVG(
       config.width,
       config.height,
@@ -134,7 +144,8 @@ export class ScreenshotGenerator {
       bgColor2,
       options.headline || "",
       options.subheadline || "",
-      shouldWatermark
+      shouldWatermark,
+      isTablet
     );
 
     // Start with background SVG
@@ -150,13 +161,30 @@ export class ScreenshotGenerator {
         screenshotBuffer = Buffer.from(options.screenshotBase64!, "base64");
       }
 
-      // Calculate mockup dimensions
-      const mockupWidth = Math.floor(config.width * 0.75);
-      const mockupHeight = Math.floor(mockupWidth * 2.16);
+      // Calculate mockup dimensions (different for iPad vs iPhone)
+      let mockupWidth: number;
+      let mockupHeight: number;
+      let mockupY: number;
+      let frameThickness: number;
+      let screenRadius: number;
+
+      if (isTablet) {
+        // iPad: wider aspect ratio, larger screen
+        mockupWidth = Math.floor(config.width * 0.85);
+        mockupHeight = Math.floor(mockupWidth * (config.height / config.width));
+        mockupY = Math.floor(config.height * 0.18);
+        frameThickness = Math.floor(mockupWidth * 0.015);
+        screenRadius = Math.floor(mockupWidth * 0.025);
+      } else {
+        // iPhone
+        mockupWidth = Math.floor(config.width * 0.75);
+        mockupHeight = Math.floor(mockupWidth * 2.16);
+        mockupY = Math.floor(config.height * 0.24);
+        frameThickness = Math.floor(mockupWidth * 0.025);
+        screenRadius = Math.floor(mockupWidth * 0.1);
+      }
+
       const mockupX = Math.floor((config.width - mockupWidth) / 2);
-      const mockupY = Math.floor(config.height * 0.24);
-      const frameThickness = Math.floor(mockupWidth * 0.025);
-      const screenRadius = Math.floor(mockupWidth * 0.1);
 
       const screenWidth = mockupWidth - frameThickness * 2;
       const screenHeight = mockupHeight - frameThickness * 2;
@@ -280,36 +308,54 @@ export class ScreenshotGenerator {
     color2: string,
     headline: string,
     subheadline: string,
-    addWatermark: boolean
+    addWatermark: boolean,
+    isTablet: boolean = false
   ): string {
-    // Mockup dimensions
-    const mockupWidth = Math.floor(width * 0.75);
-    const mockupHeight = Math.floor(mockupWidth * 2.16);
+    // Mockup dimensions (different for iPad vs iPhone)
+    let mockupWidth: number;
+    let mockupHeight: number;
+    let mockupY: number;
+    let frameRadius: number;
+    let frameThickness: number;
+    let screenRadius: number;
+
+    if (isTablet) {
+      // iPad mockup dimensions
+      mockupWidth = Math.floor(width * 0.85);
+      mockupHeight = Math.floor(mockupWidth * (height / width));
+      mockupY = Math.floor(height * 0.18);
+      frameRadius = Math.floor(mockupWidth * 0.03);
+      frameThickness = Math.floor(mockupWidth * 0.015);
+      screenRadius = Math.floor(mockupWidth * 0.025);
+    } else {
+      // iPhone mockup dimensions
+      mockupWidth = Math.floor(width * 0.75);
+      mockupHeight = Math.floor(mockupWidth * 2.16);
+      mockupY = Math.floor(height * 0.24);
+      frameRadius = Math.floor(mockupWidth * 0.12);
+      frameThickness = Math.floor(mockupWidth * 0.025);
+      screenRadius = Math.floor(mockupWidth * 0.1);
+    }
+
     const mockupX = Math.floor((width - mockupWidth) / 2);
-    const mockupY = Math.floor(height * 0.24);
-
-    const frameRadius = Math.floor(mockupWidth * 0.12);
-    const frameThickness = Math.floor(mockupWidth * 0.025);
-    const screenRadius = Math.floor(mockupWidth * 0.1);
-
     const screenX = mockupX + frameThickness;
     const screenY = mockupY + frameThickness;
     const screenWidth = mockupWidth - frameThickness * 2;
     const screenHeight = mockupHeight - frameThickness * 2;
 
-    // Dynamic Island
+    // Dynamic Island (iPhone only)
     const islandWidth = Math.floor(mockupWidth * 0.35);
     const islandHeight = Math.floor(mockupWidth * 0.085);
     const islandX = mockupX + Math.floor((mockupWidth - islandWidth) / 2);
     const islandY = mockupY + frameThickness + Math.floor(mockupWidth * 0.03);
 
     // Home indicator
-    const indicatorWidth = Math.floor(mockupWidth * 0.35);
-    const indicatorHeight = Math.floor(mockupWidth * 0.015);
+    const indicatorWidth = isTablet ? Math.floor(mockupWidth * 0.15) : Math.floor(mockupWidth * 0.35);
+    const indicatorHeight = isTablet ? Math.floor(mockupWidth * 0.005) : Math.floor(mockupWidth * 0.015);
     const indicatorX = mockupX + Math.floor((mockupWidth - indicatorWidth) / 2);
-    const indicatorY = mockupY + mockupHeight - frameThickness - Math.floor(mockupWidth * 0.05);
+    const indicatorY = mockupY + mockupHeight - frameThickness - (isTablet ? Math.floor(mockupWidth * 0.02) : Math.floor(mockupWidth * 0.05));
 
-    // Side buttons
+    // Side buttons (iPhone only)
     const buttonWidth = Math.floor(mockupWidth * 0.008);
     const volumeButtonHeight = Math.floor(mockupWidth * 0.08);
     const volumeY1 = mockupY + Math.floor(mockupHeight * 0.18);
@@ -413,7 +459,7 @@ export class ScreenshotGenerator {
           ${escapeXml(subheadline)}
         </text>
 
-        <!-- iPhone Frame with Shadow -->
+        <!-- Device Frame with Shadow -->
         <rect x="${mockupX}" y="${mockupY}"
               width="${mockupWidth}" height="${mockupHeight}"
               rx="${frameRadius}" ry="${frameRadius}"
@@ -426,11 +472,13 @@ export class ScreenshotGenerator {
               rx="${screenRadius}" ry="${screenRadius}"
               fill="#000"/>
 
-        <!-- Dynamic Island -->
+        ${!isTablet ? `
+        <!-- Dynamic Island (iPhone only) -->
         <rect x="${islandX}" y="${islandY}"
               width="${islandWidth}" height="${islandHeight}"
               rx="${islandHeight / 2}" ry="${islandHeight / 2}"
               fill="#000"/>
+        ` : ''}
 
         <!-- Home Indicator -->
         <rect x="${indicatorX}" y="${indicatorY}"
@@ -438,7 +486,8 @@ export class ScreenshotGenerator {
               rx="${indicatorHeight / 2}" ry="${indicatorHeight / 2}"
               fill="rgba(255,255,255,0.5)"/>
 
-        <!-- Side Buttons -->
+        ${!isTablet ? `
+        <!-- Side Buttons (iPhone only) -->
         <rect x="${mockupX - buttonWidth}" y="${volumeY1}"
               width="${buttonWidth}" height="${volumeButtonHeight}"
               rx="${buttonWidth / 2}" ry="${buttonWidth / 2}"
@@ -455,6 +504,7 @@ export class ScreenshotGenerator {
               width="${buttonWidth}" height="${powerHeight}"
               rx="${buttonWidth / 2}" ry="${buttonWidth / 2}"
               fill="#3a3a3c"/>
+        ` : ''}
 
         <!-- Frame Highlight -->
         <rect x="${mockupX}" y="${mockupY}"
