@@ -118,23 +118,27 @@ export class LicenseManager {
       return null;
     }
 
+    const accessToken = process.env.GUMROAD_ACCESS_TOKEN;
+
+    // If no access token, use remote webhook server
+    if (!accessToken) {
+      return this.verifyFromRemoteServer(normalizedEmail);
+    }
+
     try {
       // Gumroad API requires access token for sales lookup
-      // Using the sales API to check subscription status by email
       const response = await fetch(
-        `https://api.gumroad.com/v2/sales?email=${encodeURIComponent(normalizedEmail)}`,
+        `https://api.gumroad.com/v2/sales?email=${encodeURIComponent(normalizedEmail)}&access_token=${accessToken}`,
         {
           method: "GET",
-          headers: {
-            "Authorization": `Bearer ${process.env.GUMROAD_ACCESS_TOKEN || ""}`,
-          },
         }
       );
 
       const data = await response.json();
 
       if (!data.success || !data.sales || data.sales.length === 0) {
-        return null;
+        // Fallback to remote server
+        return this.verifyFromRemoteServer(normalizedEmail);
       }
 
       // Find the subscription for this product
@@ -143,7 +147,7 @@ export class LicenseManager {
       );
 
       if (!sale) {
-        return null;
+        return this.verifyFromRemoteServer(normalizedEmail);
       }
 
       // Check subscription status
@@ -168,6 +172,78 @@ export class LicenseManager {
       };
     } catch (error) {
       console.error("Gumroad API error:", error);
+      // Fallback to remote server
+      return this.verifyFromRemoteServer(normalizedEmail);
+    }
+  }
+
+  /**
+   * Verify from remote webhook server
+   */
+  private async verifyFromRemoteServer(email: string): Promise<{
+    valid: boolean;
+    expiresAt: string;
+    status: "active" | "expired" | "cancelled";
+    email?: string;
+  } | null> {
+    const webhookServerUrl = process.env.WEBHOOK_SERVER_URL || "https://store-screenshot-webhook-production.up.railway.app";
+
+    try {
+      const response = await fetch(`${webhookServerUrl}/verify/${encodeURIComponent(email)}`);
+      const data = await response.json();
+
+      if (data.subscribed) {
+        const expiry = new Date();
+        expiry.setDate(expiry.getDate() + 35);
+
+        return {
+          valid: true,
+          expiresAt: expiry.toISOString(),
+          status: "active",
+          email,
+        };
+      }
+
+      return null;
+    } catch (error) {
+      // Fallback to local file if server is unavailable
+      return this.verifyFromLocalFile(email);
+    }
+  }
+
+  /**
+   * Verify from local subscribers file (fallback)
+   */
+  private verifyFromLocalFile(email: string): {
+    valid: boolean;
+    expiresAt: string;
+    status: "active" | "expired" | "cancelled";
+    email?: string;
+  } | null {
+    const subscribersFile = path.join(this.configDir, "subscribers.json");
+
+    try {
+      if (!fs.existsSync(subscribersFile)) {
+        return null;
+      }
+
+      const data = JSON.parse(fs.readFileSync(subscribersFile, "utf-8"));
+      const subscribers: string[] = data.emails || [];
+
+      if (subscribers.includes(email.toLowerCase())) {
+        const expiry = new Date();
+        expiry.setDate(expiry.getDate() + 35);
+
+        return {
+          valid: true,
+          expiresAt: expiry.toISOString(),
+          status: "active",
+          email,
+        };
+      }
+
+      return null;
+    } catch (error) {
       return null;
     }
   }
