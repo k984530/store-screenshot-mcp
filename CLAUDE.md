@@ -19,11 +19,11 @@ npm start         # Run compiled JavaScript
 
 ### Core Components
 
-- **src/index.ts** - MCP server entry point. Registers tools with the MCP SDK, handles tool requests via `CallToolRequestSchema`. Tools: `generate_screenshot`, `generate_batch_screenshots`, `subscription_status`, `activate_subscription`, `deactivate_subscription`, `list_presets`, `list_devices`.
+- **src/index.ts** - MCP server entry point. Registers tools with the MCP SDK, handles tool requests via `CallToolRequestSchema`. Tools: `generate_screenshot`, `generate_batch_screenshots`, `subscription_status`, `activate_subscription`, `deactivate_subscription`, `refresh_subscription`, `list_presets`, `list_devices`.
 
 - **src/screenshot-generator.ts** - Image generation using Sharp. Creates SVG templates with gradients, iPhone mockup frames (Dynamic Island, home indicator, side buttons), and text overlays. Composites app screenshots into the mockup with rounded corner masking.
 
-- **src/license-manager.ts** - Freemium subscription system. Tracks daily usage limits, manages Pro/Free feature flags. Config stored in `~/.store-screenshot-mcp/`.
+- **src/license-manager.ts** - Freemium subscription system. Tracks daily usage limits, manages Pro/Free feature flags. Config stored in `~/.store-screenshot-mcp/`. Subscription verification uses Gumroad API (with `GUMROAD_ACCESS_TOKEN`) or falls back to remote webhook server (`WEBHOOK_SERVER_URL`) then local file.
 
 ### Data Flow
 
@@ -49,17 +49,22 @@ npm start         # Run compiled JavaScript
 
 ## MCP Registration
 
-Server registered in `~/.claude/mcp_settings.json`:
+Add to project `.mcp.json` or global `~/.claude/settings.json`:
 ```json
 {
   "mcpServers": {
     "store-screenshot": {
       "command": "node",
-      "args": ["/Users/choiwon/application/StoreScreenShotMCP/dist/index.js"]
+      "args": ["/path/to/store-screenshot-mcp/dist/index.js"]
     }
   }
 }
 ```
+
+## Environment Variables (optional)
+
+- `GUMROAD_ACCESS_TOKEN` - Gumroad API token for direct subscription verification
+- `WEBHOOK_SERVER_URL` - Custom webhook server URL (default: Railway-hosted server)
 
 ## Dependencies
 
