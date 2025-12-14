@@ -225,6 +225,9 @@ async function main() {
             bgColor2?: string;
           };
 
+          // Auto-refresh subscription status before generating
+          await licenseManager.refreshSubscription();
+
           const result = await generator.generate({
             headline,
             subheadline,
@@ -283,6 +286,9 @@ async function main() {
             bgColor1?: string;
             bgColor2?: string;
           };
+
+          // Auto-refresh subscription status before generating
+          await licenseManager.refreshSubscription();
 
           const results = await generator.generateBatch({
             slides,
