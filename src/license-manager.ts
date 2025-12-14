@@ -58,10 +58,11 @@ export class LicenseManager {
   private usageFile: string;
   private currentSubscription: SubscriptionInfo | null = null;
 
-  // 결제 URL (Gumroad/LemonSqueezy/Stripe 링크로 변경)
+  // Gumroad 설정
   public readonly purchaseUrl = "https://8566730725923.gumroad.com/l/bkkfx";
   public readonly manageUrl = "https://app.gumroad.com/library";
   public readonly productName = "Store Screenshot Generator Pro";
+  public readonly productId = "bkkfx"; // Gumroad product permalink
   public readonly pricing = PRICING;
 
   constructor() {
@@ -96,49 +97,82 @@ export class LicenseManager {
 
   /**
    * Validate license key format
-   * Format: XXXX-XXXX-XXXX-XXXX
+   * Gumroad keys are 35-character alphanumeric strings with hyphens
    */
   private validateKeyFormat(key: string): boolean {
-    const pattern = /^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
-    return pattern.test(key.toUpperCase());
+    // Gumroad license key format: XXXXXXXX-XXXXXXXX-XXXXXXXX-XXXXXXXX
+    const pattern = /^[A-F0-9]{8}-[A-F0-9]{8}-[A-F0-9]{8}-[A-F0-9]{8}$/i;
+    return pattern.test(key.trim());
   }
 
   /**
-   * Verify subscription key with server (simulated)
-   * In production: API call to LemonSqueezy/Gumroad/your server
+   * Verify license key with Gumroad API
    */
   private async verifySubscription(key: string): Promise<{
     valid: boolean;
     expiresAt: string;
     status: "active" | "expired" | "cancelled";
+    email?: string;
   } | null> {
-    const normalizedKey = key.toUpperCase().trim();
+    const normalizedKey = key.trim();
 
-    if (!this.validateKeyFormat(normalizedKey)) {
+    try {
+      const response = await fetch("https://api.gumroad.com/v2/licenses/verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          product_id: this.productId,
+          license_key: normalizedKey,
+          increment_uses_count: "false",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        return null;
+      }
+
+      // Gumroad subscription: check if subscription is active
+      const purchase = data.purchase;
+
+      // For subscriptions, check cancelled/ended status
+      if (purchase.subscription_cancelled_at || purchase.subscription_ended_at) {
+        return {
+          valid: false,
+          expiresAt: purchase.subscription_ended_at || new Date().toISOString(),
+          status: "cancelled",
+          email: purchase.email,
+        };
+      }
+
+      // Calculate expiry based on subscription
+      // Gumroad subscriptions renew monthly, so set expiry to next billing date
+      let expiresAt: string;
+      if (purchase.subscription_id) {
+        // Active subscription - set expiry to 35 days from now (buffer for monthly renewal)
+        const expiry = new Date();
+        expiry.setDate(expiry.getDate() + 35);
+        expiresAt = expiry.toISOString();
+      } else {
+        // One-time purchase - lifetime access
+        const expiry = new Date();
+        expiry.setFullYear(expiry.getFullYear() + 100);
+        expiresAt = expiry.toISOString();
+      }
+
+      return {
+        valid: true,
+        expiresAt,
+        status: "active",
+        email: purchase.email,
+      };
+    } catch (error) {
+      console.error("Gumroad API error:", error);
       return null;
     }
-
-    // ============================================
-    // TODO: Replace with actual API verification
-    // ============================================
-    // Example with LemonSqueezy API:
-    // const response = await fetch('https://api.lemonsqueezy.com/v1/licenses/validate', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ license_key: key })
-    // });
-    // const data = await response.json();
-    // return { valid: data.valid, expiresAt: data.license_key.expires_at, status: data.status };
-
-    // Demo: Calculate expiry (1 month from now for demo keys)
-    const expiresAt = new Date();
-    expiresAt.setMonth(expiresAt.getMonth() + 1);
-
-    return {
-      valid: true,
-      expiresAt: expiresAt.toISOString(),
-      status: "active",
-    };
   }
 
   /**

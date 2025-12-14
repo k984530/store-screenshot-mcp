@@ -115,7 +115,7 @@ PRO PLAN ($4.9/mo): Unlimited, no watermark, all presets & devices, batch genera
       properties: {
         licenseKey: {
           type: "string",
-          description: "Your license key (format: XXXX-XXXX-XXXX-XXXX)",
+          description: "Your Gumroad license key (format: XXXXXXXX-XXXXXXXX-XXXXXXXX-XXXXXXXX)",
         },
         email: {
           type: "string",
