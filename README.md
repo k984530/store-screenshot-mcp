@@ -2,6 +2,8 @@
 
 App Store / Play Store 등록용 스크린샷을 생성하는 MCP(Model Context Protocol) 서버입니다.
 
+![Demo](assets/demo.gif)
+
 ## Features
 
 - iPhone/iPad 목업 프레임에 앱 스크린샷 삽입
